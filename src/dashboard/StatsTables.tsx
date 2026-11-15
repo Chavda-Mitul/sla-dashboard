@@ -14,7 +14,9 @@ import { tokens } from "../theme";
 
 export function TableFrame({ children, label }: { children: ReactNode; label: string }) {
   return (
-    <TableContainer sx={{ bgcolor: tokens.surface, border: `1px solid ${tokens.hairline}`, borderRadius: 1 }}>
+    // position: relative keeps absolutely positioned screen-reader text inside the scrolling frame,
+    // so a wide table can't widen the page on a phone.
+    <TableContainer sx={{ position: "relative", bgcolor: tokens.surface, border: `1px solid ${tokens.hairline}`, borderRadius: 1 }}>
       <Table size="small" aria-label={label}>
         {children}
       </Table>
@@ -33,7 +35,8 @@ export function SlaTable({ rows, targetPct }: { rows: MonthlySla[]; targetPct: n
           <TableCell>Month</TableCell>
           <TableCell align="right">Availability</TableCell>
           <TableCell align="right">Downtime</TableCell>
-          <TableCell align="right">Downtime allowed</TableCell>
+          <TableCell align="right">Allowed</TableCell>
+          <TableCell align="right">Left</TableCell>
           <TableCell>Result vs {targetPct}%</TableCell>
         </TableRow>
       </TableHead>
@@ -41,7 +44,8 @@ export function SlaTable({ rows, targetPct }: { rows: MonthlySla[]; targetPct: n
         {sorted.map((row) => {
           const [year, monthNumber] = row.month.split("-").map(Number) as [number, number];
           const daysInMonth = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
-          const observedDays = row.observedMinutes / 1440;
+          // One decimal, but a whole number when it rounds to one (863 of 864 checks reads "9", not "9.0").
+          const observedDays = Math.round((row.observedMinutes / 1440) * 10) / 10;
           return (
             <TableRow key={`${row.serviceId}-${row.month}`} sx={{ bgcolor: row.slaMet ? undefined : tokens.outageWash }}>
               <TableCell>{row.serviceId}</TableCell>
@@ -49,16 +53,17 @@ export function SlaTable({ rows, targetPct }: { rows: MonthlySla[]; targetPct: n
                 {month(row.month)}
                 {observedDays < daysInMonth && (
                   <Typography component="span" variant="body2" sx={{ color: tokens.muted, ml: 1 }}>
-                    {observedDays % 1 === 0 ? observedDays : observedDays.toFixed(1)} of {daysInMonth} days observed
+                    {observedDays} of {daysInMonth} days observed
                   </Typography>
                 )}
               </TableCell>
               <TableCell align="right">{percent(row.availabilityPct)}</TableCell>
               <TableCell align="right">{duration(row.downtimeMinutes)}</TableCell>
+              <TableCell align="right">{duration(row.errorBudgetMinutes)}</TableCell>
               <TableCell align="right">
                 {row.errorBudgetLeftMinutes >= 0
-                  ? `${duration(row.errorBudgetLeftMinutes)} left of ${duration(row.errorBudgetMinutes)}`
-                  : `${duration(-row.errorBudgetLeftMinutes)} over ${duration(row.errorBudgetMinutes)}`}
+                  ? duration(row.errorBudgetLeftMinutes)
+                  : `Over by ${duration(-row.errorBudgetLeftMinutes)}`}
               </TableCell>
               <TableCell>
                 <SlaResult met={row.slaMet} />

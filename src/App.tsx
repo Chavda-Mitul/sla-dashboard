@@ -52,7 +52,7 @@ export default function App() {
   return (
     <>
       <Box component="header" sx={{ bgcolor: tokens.surface, borderBottom: `1px solid ${tokens.hairline}` }}>
-        <Container maxWidth="lg" sx={{ display: "flex", alignItems: "center", gap: 3, minHeight: 56 }}>
+        <Container maxWidth="lg" sx={{ display: "flex", alignItems: "center", gap: { xs: 1, sm: 3 }, minHeight: 56 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, fontWeight: 600, fontSize: "1.0625rem" }}>
             <img src="/favicon.svg" alt="" width={22} height={22} />
             SLA monitor

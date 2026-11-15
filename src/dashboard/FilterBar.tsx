@@ -33,7 +33,8 @@ export function FilterBar({ datasets, datasetId, onDatasetChange, filter, onFilt
         flexWrap: "wrap",
         alignItems: "center",
         gap: 2,
-        py: 1.5,
+        pt: 2.25, // room for the floating input labels
+        pb: 1.5,
         mb: 2,
         borderBottom: `1px solid ${tokens.hairline}`,
       }}

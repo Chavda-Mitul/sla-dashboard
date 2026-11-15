@@ -44,13 +44,17 @@ export function StatsSection({ stats, detail, start, end, onOutageSelect }: Prop
       <AccordionSummary
         aria-controls="stats-content"
         id="stats-header"
-        sx={{ px: 0, alignItems: "flex-start", "& .MuiAccordionSummary-content": { my: 1, gap: 3, justifyContent: "space-between" } }}
+        sx={{
+          px: 0,
+          alignItems: "flex-start",
+          "& .MuiAccordionSummary-content": { my: 1, gap: 3, justifyContent: "space-between", alignItems: "flex-start" },
+        }}
       >
-        <Box sx={{ maxWidth: "62ch" }}>
-          <Typography variant="h1" component="span" sx={{ display: "block" }}>
+        <Box>
+          <Typography variant="h1" component="span" sx={{ display: "block", maxWidth: "30ch", fontSize: { xs: "1.5rem", sm: "2rem" } }}>
             {headline.title}
           </Typography>
-          <Typography color="text.secondary" component="span" sx={{ display: "block", mt: 1 }}>
+          <Typography color="text.secondary" component="span" sx={{ display: "block", mt: 1, maxWidth: "80ch" }}>
             {headline.detail} {date(new Date(start).toISOString())} to {date(new Date(end - 1).toISOString())}, UTC.
           </Typography>
         </Box>
@@ -81,7 +85,7 @@ export function StatsSection({ stats, detail, start, end, onOutageSelect }: Prop
 
             <Block
               title="SLA by month"
-              note={`Billing is monthly. Availability = 1 − outage minutes ÷ observed minutes; below ${data.slaTargetPct}% the customer is owed a credit.`}
+              note={`Billing is monthly. Availability = 1 − outage minutes ÷ observed minutes; below ${data.slaTargetPct}% the customer is owed a credit. Allowed is the downtime ${data.slaTargetPct}% permits over the observed minutes.`}
             >
               <SlaTable rows={data.monthly} targetPct={data.slaTargetPct} />
             </Block>
@@ -188,7 +192,15 @@ function RejectedRows({ detail }: { detail: DatasetDetail }) {
                 <TableRow key={row.sourceLine}>
                   <TableCell align="right">{row.sourceLine}</TableCell>
                   <TableCell>{REJECT_LABELS[row.reason]}</TableCell>
-                  <TableCell sx={{ fontFamily: "ui-monospace, Consolas, monospace", fontSize: "0.8125rem", wordBreak: "break-all" }}>
+                  <TableCell
+                    sx={{
+                      fontFamily: "ui-monospace, Consolas, monospace",
+                      fontSize: "0.8125rem",
+                      whiteSpace: "normal",
+                      wordBreak: "break-all",
+                      minWidth: 280,
+                    }}
+                  >
                     {row.raw}
                   </TableCell>
                 </TableRow>

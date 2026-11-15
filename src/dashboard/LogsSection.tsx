@@ -52,12 +52,14 @@ export function LogsSection({ ref, dataset, range, filter, onFilterChange }: Pro
   );
 
   return (
-    <Box component="section" ref={ref} aria-labelledby="logs-heading" sx={{ scrollMarginTop: 80 }}>
+    // Scroll target sits below the sticky filter bar, not under it.
+    <Box component="section" ref={ref} aria-labelledby="logs-heading" sx={{ scrollMarginTop: 96 }}>
       <Typography variant="h2" id="logs-heading" sx={{ fontSize: "1.375rem" }}>
         Check logs
       </Typography>
       <Typography color="text.secondary" sx={{ mt: 0.25, mb: 1.5 }}>
-        Every agent's report is its own row, oldest first. Times are UTC.
+        Every agent's report is its own row, oldest first. Times are UTC; latency is in milliseconds, converted where
+        the file used seconds.
       </Typography>
 
       <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 2, mb: 1.5 }}>
@@ -67,6 +69,8 @@ export function LogsSection({ ref, dataset, range, filter, onFilterChange }: Pro
           label="Service"
           value={filter.service}
           onChange={(event) => onFilterChange({ ...filter, service: event.target.value })}
+          // Show "All services" for the empty value instead of an empty box.
+          slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
           sx={{ minWidth: 200, bgcolor: tokens.surface }}
         >
           <MenuItem value="">All services</MenuItem>
@@ -138,7 +142,9 @@ export function LogsSection({ ref, dataset, range, filter, onFilterChange }: Pro
                     <TableCell align="right">{row.latencyMs === null ? "–" : `${count(row.latencyMs)} ms`}</TableCell>
                     <TableCell>
                       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                        {row.flags.map((flag) => (
+                        {/* A unit conversion is routine (every svc-search row), so it's counted in
+                            Data quality and mentioned above instead of flagged on each row. */}
+                        {row.flags.filter((flag) => flag !== "latency_from_seconds").map((flag) => (
                           <Chip key={flag} label={FLAG_LABELS[flag]} size="small" variant="outlined" sx={{ height: 22, borderColor: tokens.grid }} />
                         ))}
                       </Box>
@@ -159,6 +165,7 @@ export function LogsSection({ ref, dataset, range, filter, onFilterChange }: Pro
               onPageChange={(_event, next) => setPaging({ key: filterKey, page: next })}
               onRowsPerPageChange={(event) => setPageSize(Number(event.target.value))}
               labelRowsPerPage="Rows per page"
+              sx={{ "& .MuiTablePagination-toolbar": { flexWrap: "wrap", pl: 0 } }}
             />
           </Box>
         )

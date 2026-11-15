@@ -26,7 +26,8 @@ export function QualityReport({ report }: { report: Report }) {
         {report.missingSlots === 0
           ? `Every service has a result for every 15-minute check (${count(report.expectedSlots)} checks).`
           : `${count(report.coveredSlots)} of ${count(report.expectedSlots)} checks have a valid result; ` +
-            `${count(report.missingSlots)} have none, because every report for them was dropped or missing.`}
+            `${count(report.missingSlots)} ${report.missingSlots === 1 ? "has" : "have"} none, because every report ` +
+            `for ${report.missingSlots === 1 ? "it" : "them"} was dropped or missing.`}
         {multiAgent}
       </Typography>
 

@@ -58,6 +58,8 @@ export const theme = createTheme({
           fontVariantNumeric: "tabular-nums",
           borderColor: tokens.hairline,
           padding: "6px 12px",
+          // Narrow screens scroll the table sideways instead of squeezing "svc-search" onto two lines.
+          whiteSpace: "nowrap",
         },
         head: { fontWeight: 600, color: tokens.inkSecondary, whiteSpace: "nowrap" },
       },
