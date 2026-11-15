@@ -93,6 +93,8 @@ export interface Stats {
   services: ServiceStats[];
   monthly: MonthlySla[];
   outages: OutageView[];
+  /** Failed checks outside any outage (at most a few hundred per dataset), for the timeline. */
+  transientFailures: { serviceId: string; checkedAt: string }[];
 }
 
 export interface LogRow {

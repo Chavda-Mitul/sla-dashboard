@@ -31,6 +31,9 @@ describe("computeStats", () => {
         observedChecks: 3,
       },
     ]);
+    expect(computeStats(checks("svc-a", "X...XXX.")).transientFailures).toEqual([
+      { serviceId: "svc-a", checkedAt: "2025-05-08T00:00:00.000Z" },
+    ]);
     expect(services).toMatchObject([
       {
         serviceId: "svc-a",
@@ -77,7 +80,7 @@ describe("computeStats", () => {
   });
 
   it("returns nothing for an empty range", () => {
-    expect(computeStats([])).toEqual({ services: [], monthly: [], outages: [] });
+    expect(computeStats([])).toEqual({ services: [], monthly: [], outages: [], transientFailures: [] });
   });
 });
 

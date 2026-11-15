@@ -20,7 +20,7 @@ const MINUTE_MS = 60_000;
 export function computeStats(
   checks: CheckSample[],
   rules: OutageRules = OUTAGE_RULES,
-): Pick<Stats, "services" | "monthly" | "outages"> {
+): Pick<Stats, "services" | "monthly" | "outages" | "transientFailures"> {
   const slots = resolveSlots(checks);
   const { outages, transientFailures } = detectOutages(slots, rules);
   const serviceIds = [...new Set(slots.map((s) => s.serviceId))].sort();
@@ -69,6 +69,7 @@ export function computeStats(
         observedChecks: o.observedChecks,
       }),
     ),
+    transientFailures: transientFailures.map((s) => ({ serviceId: s.serviceId, checkedAt: s.checkedAt.toISOString() })),
   };
 }
 

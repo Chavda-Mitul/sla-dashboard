@@ -1,122 +1,101 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Container from "@mui/material/Container";
+import { useEffect, useState } from "react";
+import { DashboardView } from "./dashboard/DashboardView";
+import { ALL_DATES, type DateFilter } from "./dashboard/dateFilter";
+import { tokens } from "./theme";
+import { UploadView } from "./upload/UploadView";
 
-function App() {
-  const [count, setCount] = useState(0)
+type View = "dashboard" | "upload";
+
+interface AppState {
+  view: View;
+  datasetId: string | null;
+  filter: DateFilter;
+}
+
+/** The view, dataset and date filter live in the URL, so a link reopens the same view. */
+function readUrl(): AppState {
+  const params = new URLSearchParams(window.location.search);
+  const from = params.get("from") ?? "";
+  const to = params.get("to") ?? "";
+  const mode = !from && !to ? "all" : from === to ? "day" : "range";
+  return {
+    view: params.get("view") === "upload" ? "upload" : "dashboard",
+    datasetId: params.get("dataset"),
+    filter: { mode, from, to },
+  };
+}
+
+function writeUrl({ view, datasetId, filter }: AppState): void {
+  const params = new URLSearchParams();
+  if (view === "upload") params.set("view", "upload");
+  if (datasetId) params.set("dataset", datasetId);
+  if (filter.mode === "day" && filter.from) {
+    params.set("from", filter.from);
+    params.set("to", filter.from);
+  } else if (filter.mode === "range") {
+    if (filter.from) params.set("from", filter.from);
+    if (filter.to) params.set("to", filter.to);
+  }
+  const search = params.toString();
+  window.history.replaceState(null, "", search ? `?${search}` : window.location.pathname);
+}
+
+export default function App() {
+  const [state, setState] = useState<AppState>(readUrl);
+  useEffect(() => writeUrl(state), [state]);
+
+  const showView = (view: View) => setState((s) => ({ ...s, view }));
 
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      <Box component="header" sx={{ bgcolor: tokens.surface, borderBottom: `1px solid ${tokens.hairline}` }}>
+        <Container maxWidth="lg" sx={{ display: "flex", alignItems: "center", gap: 3, minHeight: 56 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, fontWeight: 600, fontSize: "1.0625rem" }}>
+            <img src="/favicon.svg" alt="" width={22} height={22} />
+            SLA monitor
+          </Box>
+          <Box component="nav" aria-label="Main" sx={{ display: "flex", gap: 0.5 }}>
+            {(["dashboard", "upload"] as const).map((view) => (
+              <Button
+                key={view}
+                onClick={() => showView(view)}
+                aria-current={state.view === view ? "page" : undefined}
+                color="inherit"
+                sx={{
+                  color: state.view === view ? tokens.ink : tokens.muted,
+                  borderBottom: `2px solid ${state.view === view ? tokens.petrol : "transparent"}`,
+                  borderRadius: 0,
+                }}
+              >
+                {view === "dashboard" ? "Dashboard" : "Upload CSV"}
+              </Button>
+            ))}
+          </Box>
+        </Container>
+      </Box>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
+      <Container component="main" maxWidth="lg" sx={{ py: 3 }}>
+        {state.view === "upload" ? (
+          <UploadView
+            onOpenDataset={(datasetId) =>
+              setState({ view: "dashboard", datasetId, filter: ALL_DATES })
+            }
+          />
+        ) : (
+          <DashboardView
+            datasetId={state.datasetId}
+            filter={state.filter}
+            onDatasetChange={(datasetId) =>
+              setState((s) => ({ ...s, datasetId, filter: ALL_DATES }))
+            }
+            onFilterChange={(filter) => setState((s) => ({ ...s, filter }))}
+            onUploadClick={() => showView("upload")}
+          />
+        )}
+      </Container>
     </>
-  )
+  );
 }
-
-export default App
