@@ -7,8 +7,10 @@
  */
 import { describe, expect, it } from "vitest";
 import { cleanChecks } from "../lib/clean/cleanChecks.js";
+import { detectOutages } from "../lib/sla/outages.js";
+import { resolveSlots } from "../lib/sla/slots.js";
 import { SLOT_MS } from "../lib/time.js";
-import { DATA_FILES, INCIDENT_LOG, readDataFile } from "./fixtures.js";
+import { DATA_FILES, INCIDENT_LOG, loggedIncidents, readDataFile, type CheckpointWindow } from "./fixtures.js";
 
 const CHECKS_PER_DAY = 96;
 const SERVICES = ["svc-auth", "svc-notify", "svc-payments", "svc-reports", "svc-search"];
@@ -62,12 +64,29 @@ const GOLDEN = {
   },
 } as const;
 
+/**
+ * Bursts the detector flags that are NOT in the incident log. Each is 3 failures within a few
+ * checks, the same shape as the shortest logged outage (12d svc-search day 8: 3 failures in
+ * 6 checks), so no rule can catch that one without also catching these. Listed explicitly so
+ * any change in detector behaviour shows up here.
+ */
+const UNLOGGED_BURSTS: Record<string, CheckpointWindow[]> = {
+  "monitoring_checks_9d_seed101.csv": [{ serviceId: "svc-search", day: 8, from: 41, to: 43 }],
+  "monitoring_checks_12d_seed505.csv": [{ serviceId: "svc-reports", day: 2, from: 34, to: 39 }],
+  "monitoring_checks_14d_seed202.csv": [],
+  "monitoring_checks_21d_seed303.csv": [{ serviceId: "svc-reports", day: 2, from: 64, to: 70 }],
+  "monitoring_checks_30d_seed404.csv": [],
+};
+
+/** Detected boundaries may differ from the log by this many checks (flapping and noise at the edges). */
+const BOUNDARY_TOLERANCE = 3;
+
 it("covers every sample file", () => {
   expect(DATA_FILES).toEqual(Object.keys(GOLDEN).sort());
 });
 
 describe.each(DATA_FILES)("%s", (file) => {
-  const { report } = cleanChecks(readDataFile(file));
+  const { checks, report } = cleanChecks(readDataFile(file));
   const log = INCIDENT_LOG[file]!;
   const fileStart = Date.parse(`${log.start}T00:00:00Z`);
 
@@ -93,5 +112,45 @@ describe.each(DATA_FILES)("%s", (file) => {
 
   it("only leaves a slot empty when its single report was the invalid 999", () => {
     expect(report.missingSlots).toBeLessThanOrEqual(report.rejectedByReason.invalid_status_code ?? 0);
+  });
+
+  describe("outage detection vs dataset_incident_log.json", () => {
+    const { outages } = detectOutages(resolveSlots(checks));
+    // Absolute check index since the start of the file: day * 96 + check-point.
+    const detected = outages.map((o) => ({
+      serviceId: o.serviceId,
+      from: (o.start.getTime() - fileStart) / SLOT_MS,
+      to: (o.end.getTime() - SLOT_MS - fileStart) / SLOT_MS,
+    }));
+    const logged = loggedIncidents(file).map((w) => ({
+      serviceId: w.serviceId,
+      from: w.day * CHECKS_PER_DAY + w.from,
+      to: w.day * CHECKS_PER_DAY + w.to,
+    }));
+    const overlaps = (a: { serviceId: string; from: number; to: number }, b: typeof a) =>
+      a.serviceId === b.serviceId && a.from <= b.to && b.from <= a.to;
+
+    it.each(loggedIncidents(file).map((w, i) => [`${w.serviceId} day ${w.day} check-points ${w.from}-${w.to}`, i] as const))(
+      "finds logged outage %s as exactly one outage",
+      (_label, i) => {
+        const truth = logged[i]!;
+        const matches = detected.filter((d) => overlaps(d, truth));
+        expect(matches).toHaveLength(1);
+        expect(Math.abs(matches[0]!.from - truth.from)).toBeLessThanOrEqual(BOUNDARY_TOLERANCE);
+        expect(Math.abs(matches[0]!.to - truth.to)).toBeLessThanOrEqual(BOUNDARY_TOLERANCE);
+      },
+    );
+
+    it("flags only the known unlogged bursts beyond that", () => {
+      const extra = detected
+        .filter((d) => !logged.some((truth) => overlaps(d, truth)))
+        .map((d) => ({
+          serviceId: d.serviceId,
+          day: Math.floor(d.from / CHECKS_PER_DAY),
+          from: d.from % CHECKS_PER_DAY,
+          to: d.to % CHECKS_PER_DAY,
+        }));
+      expect(extra).toEqual(UNLOGGED_BURSTS[file]);
+    });
   });
 });
