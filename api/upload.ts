@@ -29,7 +29,8 @@ export function POST(request: Request): Promise<Response> {
 
     const result = cleanChecks(new TextDecoder().decode(bytes)); // throws CsvFormatError -> 400
     if (result.checks.length === 0) {
-      throw new HttpError(400, `No valid rows: all ${result.report.totalRows} rows were rejected`);
+      const rows = result.report.totalRows.toLocaleString("en-US");
+      throw new HttpError(400, `No valid rows: all ${rows} rows were rejected`);
     }
 
     const { dataset, created } = await saveDataset({ filename, sha256, result });

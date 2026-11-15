@@ -6,7 +6,14 @@ underlying check logs.
 
 ## Live URL
 
-_To be added after deployment, with the date it was last verified live._ How to redeploy is under
+**https://sla-dashboard-blue.vercel.app**
+
+Last verified live on 15 Nov 2026:
+- all 5 sample files uploaded through the API (and are there to browse)
+- the stats and logs match the local test results
+- the UI was checked in a browser
+
+It runs on free plans with no expiry. If it's ever down, redeploy with the steps under
 [Run and deploy](#run-and-deploy).
 
 ## Architecture
@@ -140,15 +147,27 @@ Deploy to Vercel + Neon, from the CLI (no CI, as the brief asks):
 
 ```bash
 npx vercel login
-npx vercel link                                   # create or pick the Vercel project
-# Vercel dashboard → the project → Storage → add Neon (free plan); it sets DATABASE_URL
-npx vercel env pull .env.production.local
+npx vercel link --yes --project sla-dashboard
+# Free Neon database in the functions' region; sets DATABASE_URL on the project.
+# The first time, it asks you to accept Neon's terms in the browser, then run it again.
+npx vercel integration add neon --billing-plan free_v3 --meta region=iad1 --no-env-pull
+npx vercel env pull .env.production.local --environment=production
 npx tsx --env-file=.env.production.local scripts/migrate.ts
 npx vercel deploy --prod
 ```
 
-The free plans stay up without a card. Neon scales to zero when idle, so the first request after a
-quiet period takes a moment longer.
+Notes:
+- The free plans stay up without a card. Neon scales to zero when idle, so the first request after
+  a quiet period takes a moment longer.
+- If your network's DNS can't resolve the Neon host (`ENOTFOUND` during the migration), paste
+  `db/schema.sql` into the SQL editor in Neon's console instead.
+- To upload with curl, add `-H "Expect:"`. For bodies over 1 MB curl sends `Expect: 100-continue`,
+  which doesn't get a reply here. Browsers don't send it.
+
+  ```bash
+  curl -H "Expect:" -H "content-type: text/csv" --data-binary @data/monitoring_checks_30d_seed404.csv \
+    "https://sla-dashboard-blue.vercel.app/api/upload?filename=monitoring_checks_30d_seed404.csv"
+  ```
 
 **How it's tested.**
 - Unit tests cover each parser and rule.
