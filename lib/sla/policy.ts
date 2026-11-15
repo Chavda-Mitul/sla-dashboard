@@ -3,9 +3,17 @@
  * so they can be reviewed and changed in one place. The reasoning is in the README (Assumptions).
  */
 
-/** A 5xx is the provider failing. A 4xx is a client-side problem, so it doesn't count as downtime. */
+/** The monthly availability promised in the SLA. Below this, the customer is owed a credit. */
+export const SLA_TARGET_PCT = 99.9;
+
+/**
+ * A 5xx is the provider failing. A 4xx is a client-side problem, so it doesn't count as downtime.
+ * Exported as a number too, so the logs query filters with the same rule.
+ */
+export const FAILURE_MIN_STATUS = 500;
+
 export function isFailure(statusCode: number): boolean {
-  return statusCode >= 500;
+  return statusCode >= FAILURE_MIN_STATUS;
 }
 
 /**

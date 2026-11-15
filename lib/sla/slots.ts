@@ -18,7 +18,7 @@ export interface Slot {
  * failure, and wrongly hiding an outage is worse than over-counting one.
  * Returned sorted by service, then time.
  */
-export function resolveSlots(checks: Check[]): Slot[] {
+export function resolveSlots(checks: Pick<Check, "serviceId" | "checkedAt" | "statusCode">[]): Slot[] {
   const tallies = new Map<string, { serviceId: string; checkedAt: Date; reports: number; failures: number }>();
 
   for (const check of checks) {
