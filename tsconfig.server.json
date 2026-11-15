@@ -1,0 +1,24 @@
+{
+  // Server-side code: Vercel functions (api/), shared logic (lib/), scripts and tests.
+  // NodeNext because Vercel runs api/ files as native ES modules without bundling,
+  // so relative imports must use the ".js" suffix of the compiled file.
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.server.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "module": "nodenext",
+    "skipLibCheck": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["api", "lib", "scripts", "test"]
+}
