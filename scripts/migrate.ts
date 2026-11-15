@@ -1,12 +1,14 @@
 /**
- * Applies db/schema.sql to DATABASE_URL (read from .env.local if present). Safe to re-run.
+ * Applies db/schema.sql to DATABASE_URL. Safe to re-run.
  *
- *   npm run db:migrate
+ *   npm run db:migrate                                                # local DB from .env.local
+ *   npx tsx --env-file=.env.production.local scripts/migrate.ts       # Neon, after `vercel env pull`
  */
 import { existsSync, readFileSync } from "node:fs";
 import pg from "pg";
 
-if (existsSync(".env.local")) process.loadEnvFile(".env.local");
+// An already-set DATABASE_URL (e.g. from --env-file) wins over .env.local.
+if (!process.env.DATABASE_URL && existsSync(".env.local")) process.loadEnvFile(".env.local");
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
