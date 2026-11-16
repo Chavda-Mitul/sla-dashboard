@@ -1,122 +1,76 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useState } from "react";
+import { AppShell, type NavTarget } from "./components/AppShell";
+import { DashboardView } from "./dashboard/DashboardView";
+import { ALL_DATES, type DateFilter } from "./dashboard/dateFilter";
+import { isTabId, type NavCounts, type TabId } from "./dashboard/tabs";
+import { UploadView } from "./upload/UploadView";
 
-function App() {
-  const [count, setCount] = useState(0)
+type View = "dashboard" | "upload";
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+interface AppState {
+  view: View;
+  datasetId: string | null;
+  filter: DateFilter;
+  tab: TabId;
 }
 
-export default App
+/** The view, section, dataset and date filter live in the URL, so a link reopens the same view. */
+function readUrl(): AppState {
+  const params = new URLSearchParams(window.location.search);
+  const from = params.get("from") ?? "";
+  const to = params.get("to") ?? "";
+  const mode = !from && !to ? "all" : from === to ? "day" : "range";
+  const tab = params.get("tab");
+  return {
+    view: params.get("view") === "upload" ? "upload" : "dashboard",
+    datasetId: params.get("dataset"),
+    filter: { mode, from, to },
+    tab: isTabId(tab) ? tab : "overview",
+  };
+}
+
+function writeUrl({ view, datasetId, filter, tab }: AppState): void {
+  const params = new URLSearchParams();
+  if (view === "upload") params.set("view", "upload");
+  if (datasetId) params.set("dataset", datasetId);
+  if (filter.mode === "day" && filter.from) {
+    params.set("from", filter.from);
+    params.set("to", filter.from);
+  } else if (filter.mode === "range") {
+    if (filter.from) params.set("from", filter.from);
+    if (filter.to) params.set("to", filter.to);
+  }
+  if (view === "dashboard" && tab !== "overview") params.set("tab", tab);
+  const search = params.toString();
+  window.history.replaceState(null, "", search ? `?${search}` : window.location.pathname);
+}
+
+export default function App() {
+  const [state, setState] = useState<AppState>(readUrl);
+  const [counts, setCounts] = useState<NavCounts>({});
+  useEffect(() => writeUrl(state), [state]);
+
+  function navigate(target: NavTarget) {
+    setState((s) => (target === "upload" ? { ...s, view: "upload" } : { ...s, view: "dashboard", tab: target }));
+    window.scrollTo({ top: 0 });
+  }
+
+  return (
+    <AppShell active={state.view === "upload" ? "upload" : state.tab} counts={counts} onNavigate={navigate}>
+      {state.view === "upload" ? (
+        <UploadView onOpenDataset={(datasetId) => setState({ view: "dashboard", datasetId, filter: ALL_DATES, tab: "overview" })} />
+      ) : (
+        <DashboardView
+          datasetId={state.datasetId}
+          filter={state.filter}
+          tab={state.tab}
+          onTabChange={(tab) => setState((s) => ({ ...s, tab }))}
+          onCountsChange={setCounts}
+          onDatasetChange={(datasetId) => setState((s) => ({ ...s, datasetId, filter: ALL_DATES }))}
+          onFilterChange={(filter) => setState((s) => ({ ...s, filter }))}
+          onUploadClick={() => navigate("upload")}
+        />
+      )}
+    </AppShell>
+  );
+}
