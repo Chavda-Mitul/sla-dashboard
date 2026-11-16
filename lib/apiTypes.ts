@@ -44,6 +44,28 @@ export interface OutageView {
   durationMinutes: number;
   failedChecks: number;
   observedChecks: number;
+  /** Failing status codes reported inside the outage, counted per agent report: the "why". */
+  errorCodes: Record<string, number>;
+}
+
+/** One service on one UTC day: the heatmap cell. */
+export interface DailyHealth {
+  serviceId: string;
+  day: string; // YYYY-MM-DD
+  observedChecks: number;
+  failedChecks: number;
+  downtimeMinutes: number;
+  /** SLA availability for the day (outage time only). */
+  availabilityPct: number;
+}
+
+/** One service over one time bucket: a point on the latency/error trend. */
+export interface TrendPoint {
+  start: string;
+  checks: number;
+  failedChecks: number;
+  /** p95 over every agent's latency report in the bucket; null when none had a reading. */
+  p95LatencyMs: number | null;
 }
 
 export interface LatencySummary {
@@ -95,6 +117,10 @@ export interface Stats {
   outages: OutageView[];
   /** Failed checks outside any outage (at most a few hundred per dataset), for the timeline. */
   transientFailures: { serviceId: string; checkedAt: string }[];
+  daily: DailyHealth[];
+  /** Width of each trend bucket: 1 h for short ranges, up to 6 h for a month. */
+  trendBucketMinutes: number;
+  trends: { serviceId: string; points: TrendPoint[] }[];
 }
 
 export interface LogRow {

@@ -1,14 +1,15 @@
-import type { MonthlySla, OutageView, ServiceStats, Stats } from "../apiTypes.js";
+import type { DailyHealth, MonthlySla, OutageView, ServiceStats, Stats, TrendPoint } from "../apiTypes.js";
 import type { Check } from "../clean/types.js";
 import { SLOT_MINUTES } from "../time.js";
 import { detectOutages, type Outage, type OutageRules } from "./outages.js";
-import { OUTAGE_RULES, SLA_TARGET_PCT } from "./policy.js";
+import { isFailure, OUTAGE_RULES, SLA_TARGET_PCT } from "./policy.js";
 import { resolveSlots, type Slot } from "./slots.js";
 
 /** The columns stats need; this is what the stats function loads from the database. */
 export type CheckSample = Pick<Check, "serviceId" | "serviceName" | "checkedAt" | "statusCode" | "latencyMs">;
 
 const MINUTE_MS = 60_000;
+const DAY_MS = 86_400_000;
 
 /**
  * Everything the dashboard's stats section shows, computed from the checks in the selected
@@ -20,10 +21,11 @@ const MINUTE_MS = 60_000;
 export function computeStats(
   checks: CheckSample[],
   rules: OutageRules = OUTAGE_RULES,
-): Pick<Stats, "services" | "monthly" | "outages" | "transientFailures"> {
+): Pick<Stats, "services" | "monthly" | "outages" | "transientFailures" | "daily" | "trendBucketMinutes" | "trends"> {
   const slots = resolveSlots(checks);
   const { outages, transientFailures } = detectOutages(slots, rules);
   const serviceIds = [...new Set(slots.map((s) => s.serviceId))].sort();
+  const bucketMinutes = trendBucketMinutes(slots);
 
   const services = serviceIds.map((serviceId): ServiceStats => {
     const serviceChecks = checks.filter((c) => c.serviceId === serviceId);
@@ -67,10 +69,94 @@ export function computeStats(
         durationMinutes: durationMinutes(o),
         failedChecks: o.failedChecks,
         observedChecks: o.observedChecks,
+        errorCodes: countStatusCodes(
+          checks.filter(
+            (c) =>
+              c.serviceId === o.serviceId &&
+              isFailure(c.statusCode) &&
+              c.checkedAt.getTime() >= o.start.getTime() &&
+              c.checkedAt.getTime() < o.end.getTime(),
+          ),
+        ),
       }),
     ),
     transientFailures: transientFailures.map((s) => ({ serviceId: s.serviceId, checkedAt: s.checkedAt.toISOString() })),
+    daily: serviceIds.flatMap((serviceId) =>
+      dailyHealth(
+        serviceId,
+        slots.filter((s) => s.serviceId === serviceId),
+        outages.filter((o) => o.serviceId === serviceId),
+      ),
+    ),
+    trendBucketMinutes: bucketMinutes,
+    trends: serviceIds.map((serviceId) => ({
+      serviceId,
+      points: trend(
+        checks.filter((c) => c.serviceId === serviceId),
+        slots.filter((s) => s.serviceId === serviceId),
+        bucketMinutes,
+      ),
+    })),
   };
+}
+
+/** Coarser buckets for longer ranges, so a month stays around 120 points per service. */
+export function trendBucketMinutes(slots: Pick<Slot, "checkedAt">[]): number {
+  if (slots.length === 0) return 60;
+  const times = slots.map((s) => s.checkedAt.getTime());
+  const days = (Math.max(...times) - Math.min(...times)) / DAY_MS;
+  return days <= 2 ? 60 : days <= 10 ? 180 : 360;
+}
+
+function dailyHealth(serviceId: string, serviceSlots: Slot[], serviceOutages: Outage[]): DailyHealth[] {
+  const days = new Map<string, Slot[]>();
+  for (const slot of serviceSlots) {
+    const day = slot.checkedAt.toISOString().slice(0, 10);
+    days.set(day, [...(days.get(day) ?? []), slot]);
+  }
+  return [...days.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([day, daySlots]) => {
+      const dayStart = Date.parse(`${day}T00:00:00Z`);
+      const downtimeMinutes = sum(
+        serviceOutages.map((o) => overlapMinutes(o.start.getTime(), o.end.getTime(), dayStart, dayStart + DAY_MS)),
+      );
+      return {
+        serviceId,
+        day,
+        observedChecks: daySlots.length,
+        failedChecks: daySlots.filter((s) => s.failed).length,
+        downtimeMinutes,
+        availabilityPct: availability(daySlots.length, downtimeMinutes) ?? 100,
+      };
+    });
+}
+
+function trend(serviceChecks: CheckSample[], serviceSlots: Slot[], bucketMinutes: number): TrendPoint[] {
+  const bucketMs = bucketMinutes * MINUTE_MS;
+  const bucketOf = (date: Date) => Math.floor(date.getTime() / bucketMs) * bucketMs;
+  const buckets = new Map<number, { checks: number; failedChecks: number; latencies: number[] }>();
+  const at = (key: number) => {
+    let bucket = buckets.get(key);
+    if (!bucket) buckets.set(key, (bucket = { checks: 0, failedChecks: 0, latencies: [] }));
+    return bucket;
+  };
+  for (const slot of serviceSlots) {
+    const bucket = at(bucketOf(slot.checkedAt));
+    bucket.checks += 1;
+    if (slot.failed) bucket.failedChecks += 1;
+  }
+  for (const check of serviceChecks) {
+    if (check.latencyMs !== null) at(bucketOf(check.checkedAt)).latencies.push(check.latencyMs);
+  }
+  return [...buckets.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([start, b]) => ({
+      start: new Date(start).toISOString(),
+      checks: b.checks,
+      failedChecks: b.failedChecks,
+      p95LatencyMs: percentile(b.latencies.sort((x, y) => x - y), 95),
+    }));
 }
 
 function monthlySla(serviceId: string, serviceSlots: Slot[], serviceOutages: Outage[]): MonthlySla[] {

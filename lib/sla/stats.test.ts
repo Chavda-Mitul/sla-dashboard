@@ -29,6 +29,7 @@ describe("computeStats", () => {
         durationMinutes: 45,
         failedChecks: 3,
         observedChecks: 3,
+        errorCodes: { "503": 3 },
       },
     ]);
     expect(computeStats(checks("svc-a", "X...XXX.")).transientFailures).toEqual([
@@ -49,6 +50,41 @@ describe("computeStats", () => {
         statusCodes: { "200": 4, "503": 4 },
       },
     ]);
+  });
+
+  it("reports daily health per service and UTC day", () => {
+    // 96 checks = day 1; an outage of 3 checks on day 2, plus one transient failure.
+    const { daily } = computeStats(checks("svc-a", ".".repeat(96) + "X...XXX" + ".".repeat(89)));
+    expect(daily).toEqual([
+      { serviceId: "svc-a", day: "2025-05-08", observedChecks: 96, failedChecks: 0, downtimeMinutes: 0, availabilityPct: 100 },
+      {
+        serviceId: "svc-a",
+        day: "2025-05-09",
+        observedChecks: 96,
+        failedChecks: 4,
+        downtimeMinutes: 45,
+        availabilityPct: 100 * (1 - 45 / 1440),
+      },
+    ]);
+  });
+
+  it("buckets checks into hourly trend points for a short range", () => {
+    const stats = computeStats(checks("svc-a", "XXX.....")); // 2 hours
+    expect(stats.trendBucketMinutes).toBe(60);
+    expect(stats.trends).toEqual([
+      {
+        serviceId: "svc-a",
+        points: [
+          { start: "2025-05-08T00:00:00.000Z", checks: 4, failedChecks: 3, p95LatencyMs: 103 },
+          { start: "2025-05-08T01:00:00.000Z", checks: 4, failedChecks: 0, p95LatencyMs: 107 },
+        ],
+      },
+    ]);
+  });
+
+  it("uses wider trend buckets for longer ranges", () => {
+    expect(computeStats(checks("svc-a", ".".repeat(96 * 5))).trendBucketMinutes).toBe(180);
+    expect(computeStats(checks("svc-a", ".".repeat(96 * 30))).trendBucketMinutes).toBe(360);
   });
 
   it("meets the SLA when there are only transient failures", () => {
@@ -80,7 +116,7 @@ describe("computeStats", () => {
   });
 
   it("returns nothing for an empty range", () => {
-    expect(computeStats([])).toEqual({ services: [], monthly: [], outages: [], transientFailures: [] });
+    expect(computeStats([])).toEqual({ services: [], monthly: [], outages: [], transientFailures: [], daily: [], trendBucketMinutes: 60, trends: [] });
   });
 });
 
