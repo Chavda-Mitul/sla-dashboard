@@ -12,7 +12,7 @@ import Typography from "@mui/material/Typography";
 import { useState, type ReactNode } from "react";
 import type { DatasetDetail, OutageView, Stats } from "../../lib/apiTypes";
 import { QualityReport } from "../components/QualityReport";
-import { count, date, duration, list, month, REJECT_LABELS } from "../format";
+import { count, date, duration, list, month, percent, REJECT_LABELS } from "../format";
 import { tokens } from "../theme";
 import type { AsyncState } from "../useAsync";
 import { ErrorBreakdown } from "./charts/ErrorBreakdown";
@@ -65,31 +65,33 @@ export function OverviewTab({ stats, start, end, onServiceSelect, onDaySelect }:
         return (
           <>
             <Box
+              role="status"
               sx={{
                 display: "flex",
-                gap: 2,
+                gap: 1.25,
                 alignItems: "flex-start",
-                p: { xs: 2, sm: 2.5 },
-                mb: 4,
+                px: 2,
+                py: 1.5,
+                mb: 3,
                 borderRadius: 2,
                 bgcolor: breached ? tokens.outageWash : tokens.metWash,
-                border: `1px solid ${breached ? "#F1C9C3" : "#C9E2D2"}`,
+                border: `1px solid ${breached ? tokens.outageBorder : tokens.metBorder}`,
               }}
             >
               {breached ? (
-                <ErrorIcon sx={{ fontSize: 30, color: tokens.outage, mt: 0.25 }} />
+                <ErrorIcon sx={{ fontSize: 20, color: tokens.outage, mt: "1px" }} />
               ) : (
-                <CheckCircleIcon sx={{ fontSize: 30, color: tokens.met, mt: 0.25 }} />
+                <CheckCircleIcon sx={{ fontSize: 20, color: tokens.met, mt: "1px" }} />
               )}
               <Box>
-              <Typography component="p" sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" }, fontWeight: 700, fontStretch: "112.5%", lineHeight: 1.2 }}>
-                {headline.title}
-              </Typography>
-              <Typography color="text.secondary" sx={{ mt: 0.75 }}>
-                {headline.detail} {date(new Date(start).toISOString())} to {date(new Date(end - 1).toISOString())}, UTC.
-              </Typography>
+                <Typography sx={{ fontWeight: 600, color: tokens.ink }}>{headline.title}</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                  {headline.detail} {date(new Date(start).toISOString())} to {date(new Date(end - 1).toISOString())}, UTC.
+                </Typography>
               </Box>
             </Box>
+
+            <KpiRow stats={data} />
 
             <Block title="Service status" note="Worst first. Select a service to see its failed checks." first>
               <ServiceCards stats={data} onSelect={onServiceSelect} />
@@ -102,6 +104,76 @@ export function OverviewTab({ stats, start, end, onServiceSelect, onDaySelect }:
         );
       }}
     </WithStats>
+  );
+}
+
+/** The headline numbers for the selected dates, across every service. */
+function KpiRow({ stats }: { stats: Stats }) {
+  const observedMinutes = stats.services.reduce((sum, s) => sum + s.observedChecks * 15, 0);
+  const downtime = stats.services.reduce((sum, s) => sum + s.downtimeMinutes, 0);
+  const overall = observedMinutes ? 100 * (1 - downtime / observedMinutes) : null;
+  const breachedServices = new Set(stats.monthly.filter((m) => !m.slaMet).map((m) => m.serviceId)).size;
+  const tiles: { label: string; value: string; hint: string; tone?: "bad" | "good" }[] = [
+    {
+      label: "Overall availability",
+      value: percent(overall),
+      hint: `Target ${stats.slaTargetPct}% per service`,
+      tone: overall !== null && overall < stats.slaTargetPct ? "bad" : undefined,
+    },
+    { label: "Downtime", value: duration(downtime), hint: "Sustained outages only" },
+    {
+      label: "SLA breaches",
+      value: `${breachedServices} of ${stats.services.length}`,
+      hint: breachedServices ? "Services owed a credit" : "Every service met the SLA",
+      tone: breachedServices ? "bad" : "good",
+    },
+    { label: "Outages", value: count(stats.outages.length), hint: "3+ failed checks in a row" },
+    { label: "Transient errors", value: count(stats.transientFailures.length), hint: "Don't count against the SLA" },
+  ];
+
+  return (
+    <Box
+      component="dl"
+      sx={{
+        m: 0,
+        mb: 5,
+        display: "grid",
+        gridTemplateColumns: { xs: "repeat(2, 1fr)", md: "repeat(5, 1fr)" },
+        // Five tiles in two columns: the last one takes the full row instead of leaving a gap.
+        "& > :last-child": { gridColumn: { xs: "1 / -1", md: "auto" } },
+        border: `1px solid ${tokens.grid}`,
+        borderRadius: 2,
+        overflow: "hidden",
+        // 1px gaps over a border-colored background draw the dividers between tiles.
+        gap: "1px",
+        bgcolor: tokens.grid,
+      }}
+    >
+      {tiles.map((tile) => (
+        <Box key={tile.label} sx={{ bgcolor: tokens.surface, px: 2, py: 1.75 }}>
+          <Typography component="dt" variant="body2" sx={{ color: tokens.muted, fontWeight: 500 }}>
+            {tile.label}
+          </Typography>
+          <Box
+            component="dd"
+            sx={{
+              m: 0,
+              mt: 0.5,
+              fontSize: "1.5rem",
+              fontWeight: 600,
+              letterSpacing: "-0.02em",
+              lineHeight: 1.2,
+              color: tile.tone === "bad" ? tokens.outage : tokens.ink,
+            }}
+          >
+            {tile.value}
+          </Box>
+          <Typography variant="body2" sx={{ color: tokens.muted, mt: 0.25, fontSize: "0.75rem" }}>
+            {tile.hint}
+          </Typography>
+        </Box>
+      ))}
+    </Box>
   );
 }
 

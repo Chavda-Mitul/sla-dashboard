@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 import type { DatasetSummary, OutageView } from "../../lib/apiTypes";
 import { api } from "../api";
 import { isoDay } from "../format";
-import { tokens } from "../theme";
 import { useAsync } from "../useAsync";
 import { CausesTab, DataQualityTab, OutagesTab, OverviewTab, SlaTab, TabPanel } from "./DashboardTabs";
 import { rangeOf, type DateFilter } from "./dateFilter";
@@ -127,32 +126,20 @@ function DatasetDashboard({ dataset, datasets, filter, tab, onTabChange, onCount
 
   return (
     <>
-      {/* Pinned on wide screens: the dates in view are always visible while reading a section. */}
-      <Box
-        sx={{
-          position: { xs: "static", md: "sticky" },
-          top: 0,
-          zIndex: 3,
-          bgcolor: tokens.paper,
-          borderBottom: `1px solid ${tokens.grid}`,
-          mx: { xs: -2, sm: -3, lg: -5 },
-          px: { xs: 2, sm: 3, lg: 5 },
-        }}
-      >
-        <FilterBar
-          datasets={datasets}
-          datasetId={dataset.id}
-          onDatasetChange={onDatasetChange}
-          filter={filter}
-          onFilterChange={onFilterChange}
-          minDay={isoDay(new Date(firstCheck).toISOString())}
-          maxDay={isoDay(new Date(lastCheck).toISOString())}
-        />
-      </Box>
-
-      <Box component="header" sx={{ pt: { xs: 3, md: 4 }, pb: 2.5 }}>
-        <Typography variant="h1">{TAB_LABELS[tab]}</Typography>
-        <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+      <Box component="header" sx={{ pt: { xs: 3, md: 4 }, pb: 3 }}>
+        <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", columnGap: 3, rowGap: 1.5 }}>
+          <Typography variant="h1">{TAB_LABELS[tab]}</Typography>
+          <FilterBar
+            datasets={datasets}
+            datasetId={dataset.id}
+            onDatasetChange={onDatasetChange}
+            filter={filter}
+            onFilterChange={onFilterChange}
+            minDay={isoDay(new Date(firstCheck).toISOString())}
+            maxDay={isoDay(new Date(lastCheck).toISOString())}
+          />
+        </Box>
+        <Typography color="text.secondary" sx={{ mt: { xs: 1.5, md: 0.25 } }}>
           {TAB_INTROS[tab]}
         </Typography>
       </Box>

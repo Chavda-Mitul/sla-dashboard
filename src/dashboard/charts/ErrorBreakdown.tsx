@@ -34,7 +34,7 @@ export function ErrorBreakdown({ services }: { services: ServiceStats[] }) {
     return <Typography color="text.secondary">No server errors in these dates.</Typography>;
   }
 
-  const labelWidth = width < 600 ? 84 : 108;
+  const labelWidth = width < 600 ? 100 : 112;
   const plotWidth = Math.max(width - labelWidth - VALUE_ROOM, 60);
   const ticks = niceTicks(max, width < 600 ? 2 : 4);
   const scaleMax = ticks.at(-1)!;

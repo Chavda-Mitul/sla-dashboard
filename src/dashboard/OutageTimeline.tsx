@@ -36,7 +36,7 @@ export function OutageTimeline({ services, outages, transientFailures, start, en
   const [tip, setTip] = useState<Tip | null>(null);
   const [active, setActive] = useState<OutageView | null>(null);
 
-  const labelWidth = width < 600 ? 84 : 108;
+  const labelWidth = width < 600 ? 100 : 112;
   const plotWidth = Math.max(width - labelWidth - 8, 120);
   const x = (ms: number) => labelWidth + ((ms - start) / (end - start)) * plotWidth;
   const height = services.length * LANE + AXIS;
@@ -58,7 +58,7 @@ export function OutageTimeline({ services, outages, transientFailures, start, en
         </LegendKey>
       </Box>
 
-      <Box ref={container} sx={{ position: "relative", bgcolor: tokens.surface, border: `1px solid ${tokens.hairline}`, borderRadius: 1, px: 1, py: 1 }}>
+      <Box ref={container} sx={{ position: "relative", bgcolor: tokens.surface, border: `1px solid ${tokens.grid}`, borderRadius: 2, px: 1, py: 1 }}>
         {width > 0 && (
           <svg
             width={width}

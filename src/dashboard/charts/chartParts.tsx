@@ -39,7 +39,7 @@ export function ChartFrame({ children, frameRef }: { children: ReactNode; frameR
   return (
     <Box
       ref={frameRef}
-      sx={{ position: "relative", bgcolor: tokens.surface, border: `1px solid ${tokens.hairline}`, borderRadius: 1, p: `${FRAME_PAD}px` }}
+      sx={{ position: "relative", bgcolor: tokens.surface, border: `1px solid ${tokens.grid}`, borderRadius: 2, p: `${FRAME_PAD}px` }}
     >
       {children}
     </Box>

@@ -26,7 +26,7 @@ export function HealthHeatmap({ services, daily, onSelectDay }: Props) {
   const days = [...new Set(daily.map((d) => d.day))].sort();
   const cells = new Map(daily.map((d) => [`${d.serviceId}|${d.day}`, d]));
 
-  const labelWidth = width < 600 ? 84 : 108;
+  const labelWidth = width < 600 ? 100 : 112;
   const plotWidth = Math.max(width - labelWidth, 60);
   // Capped so one or two days read as cells, not a solid block across the chart.
   const cellWidth = Math.min(days.length ? plotWidth / days.length : plotWidth, 64);

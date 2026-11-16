@@ -28,9 +28,10 @@ export function FilterBar({ datasets, datasetId, onDatasetChange, filter, onFilt
         display: "flex",
         flexWrap: "wrap",
         alignItems: "center",
-        gap: 2,
-        pt: 2.25, // room for the floating input labels
-        pb: 1,
+        gap: 1.5,
+        pt: 1, // room for the floating input labels
+        width: { xs: "100%", sm: "auto" },
+        minWidth: 0,
       }}
     >
       <TextField
@@ -39,7 +40,7 @@ export function FilterBar({ datasets, datasetId, onDatasetChange, filter, onFilt
         label="Dataset"
         value={datasetId}
         onChange={(event) => onDatasetChange(event.target.value)}
-        sx={{ minWidth: 280, maxWidth: "100%", bgcolor: tokens.surface }}
+        sx={{ width: { xs: "100%", sm: "auto" }, minWidth: { sm: 260 }, maxWidth: "100%", bgcolor: tokens.surface }}
       >
         {datasets.map((d) => (
           <MenuItem key={d.id} value={d.id}>

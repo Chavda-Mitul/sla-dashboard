@@ -17,7 +17,7 @@ export function TableFrame({ children, label }: { children: ReactNode; label: st
   return (
     // position: relative keeps absolutely positioned screen-reader text inside the scrolling frame,
     // so a wide table can't widen the page on a phone.
-    <TableContainer sx={{ position: "relative", bgcolor: tokens.surface, border: `1px solid ${tokens.hairline}`, borderRadius: 1 }}>
+    <TableContainer sx={{ position: "relative", bgcolor: tokens.surface, border: `1px solid ${tokens.grid}`, borderRadius: 2 }}>
       <Table size="small" aria-label={label}>
         {children}
       </Table>

@@ -7,7 +7,7 @@ export const DAY = 24 * HOUR;
 export const HIT = 24;
 
 /** Validated with the dataviz palette script against the white chart surface (ordinal ramp, one hue). */
-export const DOWNTIME_RAMP = ["#E8968A", "#D0604F", "#A83224", "#6B1A11"] as const;
+export const DOWNTIME_RAMP = ["#FB7185", "#E11D48", "#BE123C", "#881337"] as const;
 
 /**
  * Error codes are identities, not magnitudes, so they take categorical slots in a fixed order:
@@ -96,7 +96,7 @@ export function niceTicks(max: number, count = 3): number[] {
 
 /** Downtime bins shared by the cards and the heatmap. */
 export const DOWNTIME_BINS = [
-  { min: 0, label: "None", color: "#E4E9EC" },
+  { min: 0, label: "None", color: "#EEF0F3" },
   { min: 0.001, label: "Under 1 h", color: DOWNTIME_RAMP[0] },
   { min: 60, label: "1–3 h", color: DOWNTIME_RAMP[1] },
   { min: 180, label: "3–6 h", color: DOWNTIME_RAMP[2] },

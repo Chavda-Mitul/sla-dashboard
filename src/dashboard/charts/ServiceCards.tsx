@@ -17,7 +17,7 @@ const STATUS: Record<Status, { label: string; color: string; wash: string; Icon:
 };
 
 /** Column template shared by the header and every row (wide screens). */
-const COLUMNS = "160px minmax(110px, 1fr) 100px 92px 70px 100px minmax(180px, 2fr)";
+const COLUMNS = "minmax(150px, 1.2fr) 96px 92px 68px 96px minmax(170px, 2fr) 150px";
 
 interface Props {
   stats: Stats;
@@ -46,21 +46,21 @@ export function ServiceCards({ stats, onSelect }: Props) {
           columnGap: 2,
           px: 2,
           py: 1,
-          bgcolor: "#F6F8FB",
+          bgcolor: tokens.subtle,
           borderBottom: `1px solid ${tokens.hairline}`,
-          color: tokens.inkSecondary,
-          fontSize: "0.8125rem",
-          fontWeight: 600,
-          "& > :nth-of-type(n+3):nth-of-type(-n+6)": { textAlign: "right" },
+          color: tokens.muted,
+          fontSize: "0.75rem",
+          fontWeight: 500,
+          "& > :nth-of-type(n+2):nth-of-type(-n+5)": { textAlign: "right" },
         }}
       >
-        <span>Status</span>
         <span>Service</span>
         <span>Availability</span>
         <span>Downtime</span>
         <span>Outages</span>
         <span>Main error</span>
         <span>Downtime by day</span>
+        <span>Status</span>
       </Box>
       <Box component="ul" sx={{ listStyle: "none", m: 0, p: 0 }}>
         {services.map((s) => (
@@ -114,40 +114,43 @@ function Row({
           py: 1.5,
           gridTemplateColumns: { xs: "1fr auto", lg: COLUMNS },
           gridTemplateAreas: {
-            xs: `"name avail" "status status" "facts facts" "strip strip"`,
-            lg: `"status name avail down outages error strip"`,
+            xs: `"name avail" "facts status" "strip strip"`,
+            lg: `"name avail down outages error strip status"`,
           },
-          "&:hover": { bgcolor: "#F7F9FC" },
+          "&:hover": { bgcolor: tokens.subtle },
           "&.Mui-focusVisible": { outline: `2px solid ${tokens.accent}`, outlineOffset: -2 },
         }}
       >
         <Box
           sx={{
             gridArea: "status",
-            justifySelf: "start",
+            justifySelf: { xs: "end", lg: "start" },
             display: "inline-flex",
             alignItems: "center",
             gap: 0.75,
             bgcolor: wash,
             borderRadius: 999,
-            pl: 0.75,
-            pr: 1.25,
-            py: 0.25,
+            pl: 0.625,
+            pr: 1,
+            py: "2px",
           }}
         >
-          <Icon sx={{ fontSize: 17, color }} />
-          <Box component="span" sx={{ fontSize: "0.8125rem", fontWeight: 650, color: tokens.ink, whiteSpace: "nowrap" }}>
+          <Icon sx={{ fontSize: 15, color }} />
+          <Box component="span" sx={{ fontSize: "0.75rem", fontWeight: 500, color: tokens.ink, whiteSpace: "nowrap" }}>
             {label}
           </Box>
         </Box>
 
-        <Box sx={{ gridArea: "name", minWidth: 0 }}>
-          <Box sx={{ fontWeight: 650 }}>{s.serviceId}</Box>
-          <Box sx={{ fontSize: "0.8125rem", color: tokens.muted }}>{s.serviceName}</Box>
+        <Box sx={{ gridArea: "name", minWidth: 0, display: "flex", alignItems: "center", gap: 1.25 }}>
+          <Box aria-hidden="true" sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: color, flexShrink: 0 }} />
+          <Box sx={{ minWidth: 0 }}>
+            <Box sx={{ fontWeight: 500 }}>{s.serviceId}</Box>
+            <Box sx={{ fontSize: "0.75rem", color: tokens.muted }}>{s.serviceName}</Box>
+          </Box>
         </Box>
 
         <Box sx={{ gridArea: "avail", textAlign: "right" }}>
-          <Box sx={{ ...dataType, fontSize: "1.375rem", fontWeight: 700, lineHeight: 1.1, color: belowTarget ? tokens.outage : tokens.ink }}>
+          <Box sx={{ ...dataType, fontSize: "0.9375rem", fontWeight: 600, lineHeight: 1.2, color: belowTarget ? tokens.outage : tokens.ink }}>
             {percent(s.availabilityPct)}
           </Box>
           <Box sx={{ fontSize: "0.75rem", color: tokens.muted, display: { lg: "none" } }}>availability</Box>
@@ -158,7 +161,7 @@ function Row({
         <Fact area="error" value={mainError} />
 
         {/* Narrow screens: the three facts share one line. */}
-        <Box sx={{ gridArea: "facts", display: { xs: "flex", lg: "none" }, flexWrap: "wrap", columnGap: 2.5, ...dataType, fontSize: "0.875rem", color: tokens.inkSecondary }}>
+        <Box sx={{ gridArea: "facts", display: { xs: "flex", lg: "none" }, flexWrap: "wrap", columnGap: 2.5, ...dataType, fontSize: "0.8125rem", color: tokens.inkSecondary }}>
           <span>{duration(s.downtimeMinutes)} down</span>
           <span>
             {count(s.outages)} {s.outages === 1 ? "outage" : "outages"}
@@ -173,7 +176,7 @@ function Row({
 }
 
 function Fact({ area, value }: { area: string; value: string }) {
-  return <Box sx={{ gridArea: area, display: { xs: "none", lg: "block" }, textAlign: "right", ...dataType, fontSize: "0.9375rem" }}>{value}</Box>;
+  return <Box sx={{ gridArea: area, display: { xs: "none", lg: "block" }, textAlign: "right", ...dataType, fontSize: "0.875rem", color: tokens.inkSecondary }}>{value}</Box>;
 }
 
 /** A tiny heatmap row: one cell per day. Gray is a day without downtime. */
@@ -182,7 +185,7 @@ function DayStrip({ daily }: { daily: DailyHealth[] }) {
   const worst = daily.reduce((a, b) => (b.downtimeMinutes > a.downtimeMinutes ? b : a));
   return (
     <Box sx={{ gridArea: "strip", minWidth: 0 }}>
-      <Box sx={{ display: "flex", gap: "2px", height: 14 }} aria-hidden="true">
+      <Box sx={{ display: "flex", gap: "2px", height: 12 }} aria-hidden="true">
         {daily.map((d) => (
           <Box key={d.day} sx={{ flex: 1, maxWidth: 28, borderRadius: "2px", bgcolor: downtimeColor(d.downtimeMinutes) }} />
         ))}
