@@ -11,6 +11,7 @@ import type { MonthlySla, OutageView, ServiceStats } from "../../lib/apiTypes";
 import { SlaResult } from "../components/SlaResult";
 import { count, date, duration, month, percent, time } from "../format";
 import { tokens } from "../theme";
+import { errorSummary } from "./charts/chartUtils";
 
 export function TableFrame({ children, label }: { children: ReactNode; label: string }) {
   return (
@@ -89,6 +90,7 @@ export function OutagesTable({ outages, onSelect }: { outages: OutageView[]; onS
           <TableCell>Time (UTC)</TableCell>
           <TableCell align="right">Duration</TableCell>
           <TableCell align="right">Failed checks</TableCell>
+          <TableCell>Errors seen</TableCell>
           <TableCell>
             <span className="visually-hidden">Logs</span>
           </TableCell>
@@ -106,6 +108,7 @@ export function OutagesTable({ outages, onSelect }: { outages: OutageView[]; onS
             <TableCell align="right">
               {count(outage.failedChecks)} of {count(outage.observedChecks)}
             </TableCell>
+            <TableCell>{errorSummary(outage.errorCodes)}</TableCell>
             <TableCell>
               <Button size="small" onClick={() => onSelect(outage)}>
                 Show checks

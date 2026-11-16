@@ -48,8 +48,8 @@ export function UploadView({ onOpenDataset }: { onOpenDataset: (datasetId: strin
   const busy = state.status === "uploading";
 
   return (
-    <Box sx={{ maxWidth: 760 }}>
-      <Typography variant="h1" sx={{ fontSize: "1.5rem", mb: 1 }}>
+    <Box sx={{ maxWidth: 760, pt: { xs: 3, md: 5 } }}>
+      <Typography variant="h1" sx={{ mb: 1 }}>
         Upload health checks
       </Typography>
       <Typography color="text.secondary" sx={{ mb: 2.5 }}>
@@ -73,7 +73,7 @@ export function UploadView({ onOpenDataset }: { onOpenDataset: (datasetId: strin
           py: 5,
           textAlign: "center",
           bgcolor: dragging ? "#E8F1F3" : tokens.surface,
-          border: `1.5px dashed ${dragging ? tokens.petrol : tokens.grid}`,
+          border: `1.5px dashed ${dragging ? tokens.accent : tokens.grid}`,
           borderRadius: 1,
         }}
       >

@@ -1,16 +1,14 @@
 import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useState, type ReactNode } from "react";
 import type { OutageView, Stats } from "../../lib/apiTypes";
-import { count, dateTime, duration, shortDate, time } from "../format";
-import { fonts, tokens } from "../theme";
+import { count, dateTime, duration, time } from "../format";
+import { dataType, tokens } from "../theme";
+import { LegendKey } from "./charts/chartParts";
+import { errorSummary, HIT, timeTicks, useWidth } from "./charts/chartUtils";
 
-const HOUR = 3_600_000;
-const DAY = 24 * HOUR;
 const LANE = 34; // lane height
 const BAND = 14; // outage band / transient tick height (bars stay under 24px)
 const AXIS = 24;
-const HIT = 24; // minimum hover/focus target
 
 interface Props {
   services: string[];
@@ -43,7 +41,7 @@ export function OutageTimeline({ services, outages, transientFailures, start, en
   const x = (ms: number) => labelWidth + ((ms - start) / (end - start)) * plotWidth;
   const height = services.length * LANE + AXIS;
   const laneMid = (serviceId: string) => services.indexOf(serviceId) * LANE + LANE / 2;
-  const ticks = timeTicks(start, end);
+  const ticks = timeTicks(start, end, plotWidth);
 
   function showTip(cx: number, serviceId: string, content: ReactNode) {
     setTip({ x: Math.min(Math.max(cx, 120), width - 120), y: laneMid(serviceId) - LANE / 2, content });
@@ -67,7 +65,7 @@ export function OutageTimeline({ services, outages, transientFailures, start, en
             height={height}
             role="group"
             aria-label={`Timeline of ${outages.length} outages and ${transientFailures.length} transient errors across ${services.length} services`}
-            style={{ display: "block", overflow: "visible", fontFamily: fonts.data }}
+            style={{ display: "block", overflow: "visible", ...dataType }}
             onPointerLeave={() => {
               setTip(null);
               setActive(null);
@@ -132,6 +130,7 @@ export function OutageTimeline({ services, outages, transientFailures, start, en
                     <span>
                       {count(outage.failedChecks)} of {count(outage.observedChecks)} checks failed
                     </span>
+                    <span>Errors: {errorSummary(outage.errorCodes)}</span>
                     <span>Select to see the checks</span>
                   </>
                 ));
@@ -209,51 +208,4 @@ export function OutageTimeline({ services, outages, transientFailures, start, en
       </Box>
     </Box>
   );
-}
-
-function LegendKey({ swatch, children }: { swatch: ReactNode; children: ReactNode }) {
-  return (
-    <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
-      <svg width="16" height="14" aria-hidden="true">
-        {swatch}
-      </svg>
-      <Typography variant="body2" component="span">
-        {children}
-      </Typography>
-    </Box>
-  );
-}
-
-/** Day ticks for multi-day ranges (thinned to fit), 3-hour ticks for a single day. All UTC. */
-function timeTicks(start: number, end: number): { ms: number; label: string }[] {
-  const days = (end - start) / DAY;
-  if (days <= 1.5) {
-    const ticks = [];
-    for (let ms = Math.ceil(start / (3 * HOUR)) * 3 * HOUR; ms <= end; ms += 3 * HOUR) {
-      ticks.push({ ms, label: time(new Date(ms).toISOString()) });
-    }
-    return ticks;
-  }
-  const step = days <= 10 ? 1 : days <= 20 ? 2 : 5;
-  const ticks = [];
-  for (let ms = Math.ceil(start / DAY) * DAY, i = 0; ms <= end; ms += DAY, i++) {
-    if (i % step === 0) ticks.push({ ms, label: shortDate(new Date(ms).toISOString()) });
-  }
-  return ticks;
-}
-
-/** Width of an element, kept up to date as it resizes. */
-function useWidth(): [RefObject<HTMLDivElement | null>, number] {
-  const ref = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(0);
-  useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry) setWidth(Math.floor(entry.contentRect.width));
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-  return [ref, width];
 }

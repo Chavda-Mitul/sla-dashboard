@@ -25,18 +25,12 @@ export function FilterBar({ datasets, datasetId, onDatasetChange, filter, onFilt
   return (
     <Box
       sx={{
-        position: "sticky",
-        top: 0,
-        zIndex: 3,
-        bgcolor: tokens.paper,
         display: "flex",
         flexWrap: "wrap",
         alignItems: "center",
         gap: 2,
         pt: 2.25, // room for the floating input labels
-        pb: 1.5,
-        mb: 2,
-        borderBottom: `1px solid ${tokens.hairline}`,
+        pb: 1,
       }}
     >
       <TextField

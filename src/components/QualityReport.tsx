@@ -2,7 +2,7 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import type { QualityReport as Report, RejectReason, RowFlag } from "../../lib/clean/types";
 import { count, date, FLAG_LABELS, REJECT_LABELS } from "../format";
-import { fonts, tokens } from "../theme";
+import { dataType, tokens } from "../theme";
 
 /** What the cleaner did to a file: what it kept, fixed and dropped, in plain words. */
 export function QualityReport({ report }: { report: Report }) {
@@ -69,7 +69,7 @@ function CountList({ title, rows, empty }: { title: string; rows: [string, numbe
               }}
             >
               <Box component="dt">{label}</Box>
-              <Box component="dd" sx={{ m: 0, fontFamily: fonts.data, fontVariantNumeric: "tabular-nums" }}>
+              <Box component="dd" sx={{ m: 0, ...dataType, fontVariantNumeric: "tabular-nums" }}>
                 {count(n)}
               </Box>
             </Box>
