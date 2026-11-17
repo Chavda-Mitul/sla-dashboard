@@ -1,17 +1,18 @@
 # SLA Monitoring Dashboard
 
 Upload a CSV of service health checks. A serverless function cleans it and stores it in Postgres.
-One page then shows whether each service met its 99.9% SLA, the outages behind that answer, and the
-underlying check logs.
+One page then shows a collapsible stats section (whether each service met its 99.9% SLA, and the
+outages behind that answer) with the underlying check logs below it.
 
 ## Live URL
 
 **https://sla-dashboard-blue.vercel.app**
 
-Last verified live on 15 Nov 2026:
+Last verified live on 17 Nov 2026:
 - all 5 sample files uploaded through the API (and are there to browse)
 - the stats and logs match the local test results
-- the UI was checked in a browser
+- the UI was checked in a browser: stats collapse and expand, the logs sit below them, and the
+  one-day and date-range filters drive both
 
 It runs on free plans with no expiry. If it's ever down, redeploy with the steps under
 [Run and deploy](#run-and-deploy).
@@ -113,17 +114,30 @@ outage in two. `test/sampleFiles.test.ts` asserts all of this.
 | Date filter | Whole UTC days, inclusive. One filter drives both stats and logs. Outages crossing the filter edge are cut at the edge. | The numbers on the page always describe the same slice. |
 | Time zone | Everything is UTC and labelled as such | The source mixes UTC, epoch and +05:30. |
 
+**The dashboard page**, top to bottom, all on one screen:
+1. **Filters:** the dataset, then all dates, one day or a date range (UTC). One filter drives
+   both sections below.
+2. **Stats, collapsible.** "Hide stats" folds the section down to a one-line verdict, so the logs
+   move up to the top of the page. Inside: the verdict and headline numbers, then the detail as
+   five views in tabs, so the section stays short and the logs stay within reach.
+3. **Check logs:** every stored report for the selected dates, filterable by service and
+   failed-only, paged in SQL.
+
 **Which stats, and why.** Two people use this page:
-- Billing needs to know who is owed a credit. The headline says it in words ("svc-auth and
-  svc-reports breached the 99.9% SLA in April 2025"). The **SLA by month** table shows
+- Billing needs to know who is owed a credit. The verdict says it in words ("svc-auth and
+  svc-reports breached the 99.9% SLA in April 2025"). Under it are the overall availability,
+  downtime, number of breaches, outages and transient errors. **SLA & billing** shows
   availability, downtime, downtime allowed and the result for each service and month.
-- On call needs to know what happened and when. The **outage timeline** places each outage on its
-  service's lane at its real time; selecting one opens its checks in the logs. **Service health**
-  shows what is wearing down before it becomes a breach:
-  - raw success rate
-  - transient errors
-  - latency p50/p95/p99
-  - how often the agents disagreed
+- On call needs to know what happened, when, and why:
+  - **Overview:** each service's status, worst first, and a daily health grid of downtime per
+    service per UTC day.
+  - **Outages:** a timeline placing each outage on its service's lane at its real time, and a
+    table of outages with their duration and the error codes seen.
+  - **Errors & latency:** server errors by status code, latency over time with outages marked,
+    and a service health table showing what is wearing down before it becomes a breach (raw
+    success rate, transient errors, latency p50/p95/p99, how often the agents disagreed).
+  - Selecting a service, a day or an outage sets the filters and scrolls down to those checks in
+    the logs.
 
 **Data quality** shows what the cleaner kept, fixed and dropped. The credit is decided by the data
 alone, so the page shows how that data was treated.
@@ -139,7 +153,7 @@ docker exec sla-dashboard-pg psql -U postgres -c "create database sla_test"
 cp .env.example .env.local
 npm run db:migrate
 npm run dev       # UI and API together on http://localhost:5173 (vite.config.ts serves api/ like Vercel does)
-npm test          # 121 tests; the API tests run against Postgres when TEST_DATABASE_URL is set
+npm test          # 124 tests; the API tests run against Postgres when TEST_DATABASE_URL is set
 npm run report    # quality report and outages for data/*.csv
 ```
 

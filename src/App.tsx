@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
-import { AppShell, type NavTarget } from "./components/AppShell";
+import { AppShell, type View } from "./components/AppShell";
 import { DashboardView } from "./dashboard/DashboardView";
 import { ALL_DATES, type DateFilter } from "./dashboard/dateFilter";
-import { isTabId, type NavCounts, type TabId } from "./dashboard/tabs";
+import { isTabId, type TabId } from "./dashboard/tabs";
 import { UploadView } from "./upload/UploadView";
-
-type View = "dashboard" | "upload";
 
 interface AppState {
   view: View;
@@ -14,7 +12,7 @@ interface AppState {
   tab: TabId;
 }
 
-/** The view, section, dataset and date filter live in the URL, so a link reopens the same view. */
+/** The screen, stats view, dataset and date filter live in the URL, so a link reopens the same view. */
 function readUrl(): AppState {
   const params = new URLSearchParams(window.location.search);
   const from = params.get("from") ?? "";
@@ -47,16 +45,15 @@ function writeUrl({ view, datasetId, filter, tab }: AppState): void {
 
 export default function App() {
   const [state, setState] = useState<AppState>(readUrl);
-  const [counts, setCounts] = useState<NavCounts>({});
   useEffect(() => writeUrl(state), [state]);
 
-  function navigate(target: NavTarget) {
-    setState((s) => (target === "upload" ? { ...s, view: "upload" } : { ...s, view: "dashboard", tab: target }));
+  function navigate(view: View) {
+    setState((s) => ({ ...s, view }));
     window.scrollTo({ top: 0 });
   }
 
   return (
-    <AppShell active={state.view === "upload" ? "upload" : state.tab} counts={counts} onNavigate={navigate}>
+    <AppShell active={state.view} onNavigate={navigate}>
       {state.view === "upload" ? (
         <UploadView onOpenDataset={(datasetId) => setState({ view: "dashboard", datasetId, filter: ALL_DATES, tab: "overview" })} />
       ) : (
@@ -65,7 +62,6 @@ export default function App() {
           filter={state.filter}
           tab={state.tab}
           onTabChange={(tab) => setState((s) => ({ ...s, tab }))}
-          onCountsChange={setCounts}
           onDatasetChange={(datasetId) => setState((s) => ({ ...s, datasetId, filter: ALL_DATES }))}
           onFilterChange={(filter) => setState((s) => ({ ...s, filter }))}
           onUploadClick={() => navigate("upload")}

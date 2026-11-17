@@ -52,8 +52,16 @@ export function LogsSection({ ref, dataset, range, filter, onFilterChange }: Pro
   );
 
   return (
-    // Scroll target sits below the sticky filter bar, not under it.
-    <Box component="section" ref={ref} aria-label="Check logs">
+    // When scrolled to, the heading lands below the sticky top bar, not under it.
+    <Box component="section" ref={ref} aria-labelledby="logs-heading" sx={{ scrollMarginTop: 72 }}>
+      <Box sx={{ pb: 1.5, mb: 2, borderBottom: `1px solid ${tokens.grid}` }}>
+        <Typography variant="h2" id="logs-heading">
+          Check logs
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Every agent's report as its own row, oldest first, for the dates selected above. Latency is in milliseconds.
+        </Typography>
+      </Box>
       <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 2, mb: 1.5 }}>
         <TextField
           select
