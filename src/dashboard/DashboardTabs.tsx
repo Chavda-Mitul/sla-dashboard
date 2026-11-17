@@ -25,7 +25,7 @@ import type { TabId } from "./tabs";
 
 export function TabPanel({ id, children }: { id: TabId; children: ReactNode }) {
   return (
-    <Box id={`panel-${id}`} sx={{ pb: 4 }}>
+    <Box id={`panel-${id}`} role="tabpanel" aria-labelledby={`tab-${id}`} sx={{ pt: 3 }}>
       {children}
     </Box>
   );
@@ -56,53 +56,72 @@ function WithStats({ stats, children }: { stats: AsyncState<Stats>; children: (d
   );
 }
 
-export function OverviewTab({ stats, start, end, onServiceSelect, onDaySelect }: StatsTabProps) {
+/**
+ * The answer first, above every view: the SLA verdict in words, then the headline numbers.
+ * Renders nothing until stats arrive; the open view shows the loading and error states.
+ */
+export function StatsSummary({ stats, start, end }: { stats: AsyncState<Stats>; start: number; end: number }) {
+  const data = stats.data;
+  if (!data || data.services.length === 0) return null;
+  const headline = verdict(data);
+  const breached = data.monthly.some((m) => !m.slaMet);
+  return (
+    <Box sx={{ opacity: stats.loading ? 0.5 : 1, transition: "opacity 150ms" }} aria-busy={stats.loading}>
+      <Box
+        role="status"
+        sx={{
+          display: "flex",
+          gap: 1.25,
+          alignItems: "flex-start",
+          px: 2,
+          py: 1.5,
+          mb: 2,
+          borderRadius: 2,
+          bgcolor: breached ? tokens.outageWash : tokens.metWash,
+          border: `1px solid ${breached ? tokens.outageBorder : tokens.metBorder}`,
+        }}
+      >
+        {breached ? (
+          <ErrorIcon sx={{ fontSize: 20, color: tokens.outage, mt: "1px" }} />
+        ) : (
+          <CheckCircleIcon sx={{ fontSize: 20, color: tokens.met, mt: "1px" }} />
+        )}
+        <Box>
+          <Typography sx={{ fontWeight: 600, color: tokens.ink }}>{headline.title}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+            {headline.detail} {date(new Date(start).toISOString())} to {date(new Date(end - 1).toISOString())}, UTC.
+          </Typography>
+        </Box>
+      </Box>
+
+      <KpiRow stats={data} />
+    </Box>
+  );
+}
+
+/** One line for the collapsed stats header, so hiding the stats never hides the answer. */
+export function VerdictLine({ stats }: { stats: Stats }) {
+  return (
+    <Typography variant="body2" color="text.secondary" noWrap>
+      {stats.services.length === 0 ? "No checks in these dates." : verdict(stats).title}
+    </Typography>
+  );
+}
+
+export function OverviewTab({ stats, onServiceSelect, onDaySelect }: StatsTabProps) {
   return (
     <WithStats stats={stats}>
-      {(data) => {
-        const headline = verdict(data);
-        const breached = data.monthly.some((m) => !m.slaMet);
-        return (
-          <>
-            <Box
-              role="status"
-              sx={{
-                display: "flex",
-                gap: 1.25,
-                alignItems: "flex-start",
-                px: 2,
-                py: 1.5,
-                mb: 3,
-                borderRadius: 2,
-                bgcolor: breached ? tokens.outageWash : tokens.metWash,
-                border: `1px solid ${breached ? tokens.outageBorder : tokens.metBorder}`,
-              }}
-            >
-              {breached ? (
-                <ErrorIcon sx={{ fontSize: 20, color: tokens.outage, mt: "1px" }} />
-              ) : (
-                <CheckCircleIcon sx={{ fontSize: 20, color: tokens.met, mt: "1px" }} />
-              )}
-              <Box>
-                <Typography sx={{ fontWeight: 600, color: tokens.ink }}>{headline.title}</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-                  {headline.detail} {date(new Date(start).toISOString())} to {date(new Date(end - 1).toISOString())}, UTC.
-                </Typography>
-              </Box>
-            </Box>
+      {(data) => (
+        <>
+          <Block title="Service status" note="Worst first. Select a service to see its failed checks in the logs below." first>
+            <ServiceCards stats={data} onSelect={onServiceSelect} />
+          </Block>
 
-            <KpiRow stats={data} />
-
-            <Block title="Service status" note="Worst first. Select a service to see its failed checks." first>
-              <ServiceCards stats={data} onSelect={onServiceSelect} />
-            </Block>
-
-            <Block title="Daily health" note="Outage downtime per service per UTC day. Select a day to see that service's checks.">
-              <HealthHeatmap services={data.services.map((s) => s.serviceId)} daily={data.daily} onSelectDay={onDaySelect} />
-            </Block>
-          </>
-        );
-      }}
+          <Block title="Daily health" note="Outage downtime per service per UTC day. Select a day to see that service's checks in the logs below.">
+            <HealthHeatmap services={data.services.map((s) => s.serviceId)} daily={data.daily} onSelectDay={onDaySelect} />
+          </Block>
+        </>
+      )}
     </WithStats>
   );
 }
@@ -136,7 +155,6 @@ function KpiRow({ stats }: { stats: Stats }) {
       component="dl"
       sx={{
         m: 0,
-        mb: 5,
         display: "grid",
         gridTemplateColumns: { xs: "repeat(2, 1fr)", md: "repeat(5, 1fr)" },
         // Five tiles in two columns: the last one takes the full row instead of leaving a gap.
@@ -182,7 +200,7 @@ export function OutagesTab({ stats, start, end, onOutageSelect }: StatsTabProps)
     <WithStats stats={stats}>
       {(data) => (
         <>
-          <Block title="Outages over time" note="Select an outage to see its checks in Logs." first>
+          <Block title="Outages over time" note="Select an outage to see its checks in the logs below." first>
             <OutageTimeline
               services={data.services.map((s) => s.serviceId)}
               outages={data.outages}
