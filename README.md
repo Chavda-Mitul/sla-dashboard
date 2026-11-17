@@ -8,10 +8,11 @@ outages behind that answer) with the underlying check logs below it.
 
 **https://sla-dashboard-blue.vercel.app**
 
-Last verified live on 15 Nov 2026:
+Last verified live on 17 Nov 2026:
 - all 5 sample files uploaded through the API (and are there to browse)
 - the stats and logs match the local test results
-- the UI was checked in a browser
+- the UI was checked in a browser: stats collapse and expand, the logs sit below them, and the
+  one-day and date-range filters drive both
 
 It runs on free plans with no expiry. If it's ever down, redeploy with the steps under
 [Run and deploy](#run-and-deploy).
